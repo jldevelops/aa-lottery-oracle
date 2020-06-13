@@ -1,0 +1,9 @@
+{
+	"version": "1.0",
+	"description": "Lottery oracle base AA, draw every day using any oracle results",
+	"homepage_url": "https://github.com/jldevelops/aa-lottery-oracle",
+	"source_url": "https://github.com/jldevelops/aa-lottery-oracle",
+	"field_descriptions": {
+		"trigger": "Trigger lottery winner calculation, set value to 1"
+	}
+}
