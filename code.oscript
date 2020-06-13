@@ -1,0 +1,131 @@
+{
+    "doc_url": "https://raw.githubusercontent.com/jldevelops/aa-lottery-oracle/master/description.json",
+    getters: `{
+        $ENTRY = => params.entry > 10000 ? params.entry : 10000;
+        $TRIGGER_FEE = => params.trigger_fee > 0 ? params.trigger_fee : 1;
+        $ORACLE = => params.oracle;
+        $FEED_NAME = => params.feed_name;
+
+		    $ticketsSold = => var['trigger_pot'] / $TRIGGER_FEE();
+        $actualWinner = => $ticketsSold() > 1 ? number_from_seed(data_feed[[oracles=$ORACLE(), feed_name=$FEED_NAME()]],$ticketsSold()-1) : 0;
+        $aaBalance = => balance[base] - storage_size - var['user_bytes'];
+		    $opFee = => var['low_fee_mode'] ? 0 : 5000;
+        $ticket = $addr => var[$addr];
+        $amountToClaim = $ti => {
+            $date = $ti[0];
+            if(var['amount_'||$date]){
+                $number = var['winner_'||$date];
+                $fr = $ti[1]+0;
+                $to = $ti[2]+0;
+                if($fr <= $number AND $to > $number){
+                    $to_claim = var['amount_'||$date];
+                }
+            }
+            $to_claim
+        };
+        $now = => timestamp_to_string(timestamp, 'date');
+        $day = => var['today']?var['today']:$now();
+        $triggerAvailable = => $now() != $day() AND $ticketsSold() > 0;
+	}`,
+    init: `{
+        $input = => trigger.output[[asset=base]];
+        if(trigger.output[[asset!=base]].asset != 'none')
+            bounce('no asset');
+    }`,
+    "messages": {
+        "cases": [
+            {
+                if: `{trigger.data.trigger AND $triggerAvailable() AND $input() >= 10000}`,
+                "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": 'base',
+                            "outputs": [
+                                {
+                                    "address": "{trigger.address}",
+                                    "amount": `{var['trigger_pot'] + $input() - $opFee()}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        app: 'state',
+                        state: `{
+                            $d = $day();
+                            var['winner_'||$d] = $actualWinner();
+                            var['amount_'||$d] = var['winner_pot'];
+                            var['user_bytes'] -= var['trigger_pot'];
+                            var['today'] = $now();
+                            var['winner_pot'] = 0;
+                            var['trigger_pot'] = 0;
+                            if(var['low_fee_mode'] AND ($aaBalance() - $input()) < 50000)
+                                var['low_fee_mode'] = false;
+                            else{
+                                if(!var['low_fee_mode'] AND ($aaBalance() - $input()) > 100000)
+                                    var['low_fee_mode'] = true;
+                            }
+                            response['message'] = 'Winner ticket '||$d||': '||var['winner_'||$d];
+                        }`  
+                    }
+                ]
+            },
+            {
+                init: `{
+                    if($triggerAvailable())
+                        bounce('Trigger reward available, send trigger = 1 to win '||var['trigger_pot']||' bytes');
+                    if(trigger.data.trigger)
+                        bounce('Trigger reward not available');
+                    $t = $ticket(trigger.address);
+                    if($t){
+                        if($t[0] == $day())
+                            bounce('Address already registered');
+                        $pay = $amountToClaim($t);
+                    }
+                    if(!$pay AND (($input() % $ENTRY()) != 0))
+                        bounce('Amount has to be multiple of '||$ENTRY()||' bytes. An address can buy tickets once a day.');
+                    
+                }`,
+                "messages": [
+                    {
+                        if:`{$pay}`,
+                        "app": "payment",
+                        "payload": {
+                            "asset": 'base',
+                            "outputs": [
+                                {
+                                    "address": "{trigger.address}",
+                                    "amount": `{$pay + $input() - $opFee()}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "state",
+                        "state": "{
+                            if($pay){
+                                var['user_bytes'] -= var['amount_'||$t[0]];
+                                var['amount_'||$t[0]] = false;
+                                var['winner_'||$t[0]] = false;
+                                response['message'] = 'You won '||$t[0]||' draw. Congratulations!';
+                            }
+                            else{
+                                $tickets = $input() / $ENTRY();
+                                $total_fee = $tickets * $TRIGGER_FEE();
+                                if(!var['today']) var['today'] = $now();
+                                if($ticketsSold() == 0 and $now() != $day()) var['today'] = $now();
+                                var[trigger.address] = [$day(), $ticketsSold(), ($tickets + $ticketsSold())];
+                                var['user_bytes'] += $input();
+                                var['winner_pot'] += $input() - $total_fee;
+                                var['trigger_pot'] += $total_fee;
+                                response['message'] = 'You bought '||$tickets||' tickets.';
+                                response['winner pot'] = var['winner_pot'];
+                                response['trigger pot'] = var['trigger_pot'];
+                            }
+                        }"
+                    }
+                ]
+            }
+        ]
+    }
+}
