@@ -4,7 +4,7 @@ Daily draw base AA using oracle results
 Deploy an AA with parameters of your choice, like this (all fields needed):
 ```
 {
-    base_aa: "4MCPKVREL543HEMA23UT47IZPKVVYEGF",
+    base_aa: "PCB4VYAJNH3CLHMN5BRQD4EZSOW4PBCG",
     params: {
         entry: 1000000,
         trigger_fee: 10000,
