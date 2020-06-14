@@ -11,7 +11,6 @@
         $actualWinner = => var['tickets_sold'] > 1 ? number_from_seed(data_feed[[oracles=$ORACLE(), feed_name=$FEED_NAME()]],var['tickets_sold']-1) : 0;
         $aaBalance = => balance[base] - storage_size - var['user_bytes'];
 	$opFee = $inp => ($aaBalance() - $inp) > 20000 ? 0 : 5000;
-        $ticket = $addr => var[$addr];
         $isWinnerTicket = $ti =>  var['amount_'||$ti[0]] ? (($ti[1]+0) <= var['winner_'||$ti[0]] AND ($ti[2]+0) > var['winner_'||$ti[0]]) : false;
         $now = => timestamp_to_string(timestamp, 'date');
         $day = => var['today']?var['today']:$now();
@@ -59,7 +58,7 @@
                         bounce('Trigger reward available, send trigger = 1 to win '||$triggerPot()||' bytes');
                     if(trigger.data.trigger)
                         bounce('Trigger reward not available');
-                    $tic = $ticket(trigger.address);
+                    $tic = var[trigger.address];
                     if($tic AND $tic[0] == $day())
                         bounce('Address already registered');
                 }`,
