@@ -4,7 +4,7 @@ Daily draw base AA using oracle results
 Deploy an AA with parameters of your choice, like this (all fields needed):
 ```
 {
-    base_aa: "PCB4VYAJNH3CLHMN5BRQD4EZSOW4PBCG",
+    base_aa: "YVHAIFMATQKCRDYUIQKGCMR4OZ6IKIUD",
     params: {
         entry: 1000000,
         trigger_fee: 10000,
@@ -30,8 +30,8 @@ Wait to next day (at 00:00 UTC) and trigger winner calculation to earn trigger_f
 ## Usage
 To participate, send `entry` amount or multiple
 
-To trigger lottery calculation, send `trigger` = 1. If triggered, reward is paid, otherwise 10KB are added to aa balance
+To trigger lottery winner calculation, send `trigger` = 1. If triggered, reward is paid, otherwise 10KB are lost and added to AA balance
 
-To claim reward, send any amount of bytes after lottery calculation
+To claim prize, send any amount of bytes after lottery calculation
 
 A 5KB flat fee is charged to both winners, it is reduced to 0 bytes when aa balance reach 20KB
