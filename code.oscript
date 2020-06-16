@@ -6,25 +6,23 @@
         $ORACLE = => params.oracle;
         $FEED_NAME = => params.feed_name;
 
-        $triggerPot = => var['tickets_sold']*$TRIGGER_FEE();
-        $winnerPot = => var['tickets_sold']*$ENTRY() - $triggerPot();
+        $triggerPot = => var['tickets_sold'] * $TRIGGER_FEE();
+        $winnerPot = => var['tickets_sold'] * $ENTRY() - $triggerPot();
         $actualWinner = => var['tickets_sold'] > 1 ? number_from_seed(data_feed[[oracles=$ORACLE(), feed_name=$FEED_NAME()]],var['tickets_sold']-1) : 0;
-        $aaBalance = => balance[base] - storage_size - var['user_bytes'];
-	$opFee = $inp => ($aaBalance() - $inp) > 20000 ? 0 : 5000;
         $isWinnerTicket = $ti =>  var['amount_'||$ti[0]] ? (($ti[1]+0) <= var['winner_'||$ti[0]] AND ($ti[2]+0) > var['winner_'||$ti[0]]) : false;
         $now = => timestamp_to_string(timestamp, 'date');
-        $day = => var['today']?var['today']:$now();
-        $triggerAvailable = => $now() != $day() AND var['tickets_sold'] > 0;
+        $day = => var['today'] ? var['today'] : $now();
+        $isTriggerAvailable = => $now() != $day() AND var['tickets_sold'] > 0;
 	}`,
     init: `{
-        $input = trigger.output[[asset=base]];
+	$opFee = => (balance[base] - storage_size - var['user_bytes'] - trigger.output[[asset=base]]) > 20000 ? 0 : 5000;
         if(trigger.output[[asset!=base]].asset != 'none')
             bounce('no asset');
     }`,
     "messages": {
         "cases": [
             {
-                if: `{trigger.data.trigger AND $triggerAvailable() AND $input >= 10000}`,
+                if: `{trigger.data.trigger AND $isTriggerAvailable() AND trigger.output[[asset=base]] >= 10000}`,
                 "messages": [
                     {
                         "app": "payment",
@@ -33,7 +31,7 @@
                             "outputs": [
                                 {
                                     "address": "{trigger.address}",
-                                    "amount": `{$triggerPot() + $input - $opFee($input)}`
+                                    "amount": `{$triggerPot() + trigger.output[[asset=base]] - $opFee()}`
                                 }
                             ]
                         }
@@ -54,24 +52,24 @@
             },
             {
                 init: `{
-                    if($triggerAvailable())
+                    if($isTriggerAvailable())
                         bounce('Trigger reward available, send trigger = 1 to win '||$triggerPot()||' bytes');
                     if(trigger.data.trigger)
                         bounce('Trigger reward not available');
-                    $tic = var[trigger.address];
-                    if($tic AND $tic[0] == $day())
+                    $ticket = var[trigger.address];
+                    if($ticket AND $ticket[0] == $day())
                         bounce('Address already registered');
                 }`,
                 "messages": [
                     {
-                        if:`{$tic AND $isWinnerTicket($tic)}`,
+                        if:`{$ticket AND $isWinnerTicket($ticket)}`,
                         "app": "payment",
                         "payload": {
                             "asset": 'base',
                             "outputs": [
                                 {
                                     "address": "{trigger.address}",
-                                    "amount": `{var['amount_'||$tic[0]] + $input - $opFee($input)}`
+                                    "amount": `{var['amount_'||$ticket[0]] + trigger.output[[asset=base]] - $opFee()}`
                                 }
                             ]
                         }
@@ -79,20 +77,20 @@
                     {
                         "app": "state",
                         "state": "{
-                            if($tic AND $isWinnerTicket($tic)){
-                                var['user_bytes'] -= var['amount_'||$tic[0]];
-                                var['amount_'||$tic[0]] = false;
-                                var['winner_'||$tic[0]] = false;
-                                response['message'] = 'You won '||$tic[0]||' draw. Congratulations!';
+                            if($ticket AND $isWinnerTicket($ticket)){
+                                var['user_bytes'] -= var['amount_'||$ticket[0]];
+                                var['amount_'||$ticket[0]] = false;
+                                var['winner_'||$ticket[0]] = false;
+                                response['message'] = 'You won '||$ticket[0]||' draw. Congratulations!';
                             }
                             else{
-                                if(($input % $ENTRY()) != 0)
+                                if((trigger.output[[asset=base]] % $ENTRY()) != 0)
                                     bounce('Amount has to be multiple of '||$ENTRY()||' bytes. An address can buy tickets once a day.');
                                 if(!var['today'] OR (var['tickets_sold'] == 0 AND $now() != $day()))
                                     var['today'] = $now();
-                                $tickets = $input / $ENTRY();
-                                var[trigger.address] = [$day(), var['tickets_sold'], ($tickets + var['tickets_sold'])];
-                                var['user_bytes'] += $input;
+                                $tickets = trigger.output[[asset=base]] / $ENTRY();
+                                var[trigger.address] = [$day(), var['tickets_sold']+0, ($tickets + var['tickets_sold'])];
+                                var['user_bytes'] += trigger.output[[asset=base]];
                                 var['tickets_sold'] += $tickets;
                                 response['message'] = 'You bought '||$tickets||' tickets. Actual winner pot: '||$winnerPot()||' bytes. Actual trigger pot: '||$triggerPot()||' bytes';
                             }
