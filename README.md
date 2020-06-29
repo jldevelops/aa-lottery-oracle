@@ -14,6 +14,7 @@ Deploy an AA with parameters of your choice, like this (all fields needed):
 }
 ```
 Deployed on https://explorer.obyte.org/#RqP2ZePq/9mIErnCSlP9XOMoFu5dUjcTd+2cwnkh004=
+
 Send bytes to aa adress `QZKNGJQTCI4WCS6FFXAZ4QQ55LPNMXDT` to buy tickets
 
 Wait to next day (at 00:00 UTC) and trigger winner calculation to earn trigger reward (or lose 10 kbyte)
