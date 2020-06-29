@@ -6,8 +6,8 @@ Deploy an AA with parameters of your choice, like this (all fields needed):
 {
     base_aa: "YVHAIFMATQKCRDYUIQKGCMR4OZ6IKIUD",
     params: {
-        entry: 1000000,
-        trigger_fee: 10000,
+        entry: 10000,
+        trigger_fee: 100,
         oracle: "FOPUBEUPBC6YLIQDLKL6EW775BMV7YOH",
         feed_name: "bitcoin_hash"
     }
